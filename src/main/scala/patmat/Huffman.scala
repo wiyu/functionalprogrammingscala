@@ -79,9 +79,9 @@ object Huffman {
     def loop(chars: List[Char], freq: List[(Char, Int)]): List[(Char, Int)] = {
 
       def loop2(char: Char, freq: List[(Char, Int)]): List[(Char, Int)] = {
-        freq.isEmpty match {
-          case true => List((chars.head, 1))
-          case false =>
+        freq match {
+          case Nil => List((chars.head, 1))
+          case _ =>
             val pair = freq.head
             pair._1 match {
               case `char` => (pair._1, pair._2 + 1) :: freq.tail
@@ -102,50 +102,83 @@ object Huffman {
     * head of the list should have the smallest weight), where the weight
     * of a leaf is the frequency of the character.
     */
-  def makeOrderedLeafList(freqs: List[(Char, Int)]): List[Leaf] = ???
+  def makeOrderedLeafList(freqs: List[(Char, Int)]): List[Leaf] = {
+
+    def mSort(xs: List[(Char, Int)]): List[Leaf] = {
+      def merge(xs: List[Leaf], ys: List[Leaf]): List[Leaf] = {
+        (xs, ys) match {
+          case (Nil, _) => ys
+          case (_, Nil) => xs
+          case (x :: x1, y :: y1) => if (x.weight <= y.weight) x :: merge(x1, ys) else y :: merge(xs, y1)
+        }
+      }
+
+      val n = xs.length / 2
+      if (n == 0) {
+        if (!xs.isEmpty) List(new Leaf(xs.head._1, xs.head._2)) else Nil
+      }
+      else {
+        val (ys, zs) = xs splitAt n
+        merge(mSort(ys), mSort(zs))
+      }
+    }
+    mSort(freqs)
+  }
 
   /**
     * Checks whether the list `trees` contains only one single code tree.
     */
   def singleton(trees: List[CodeTree]): Boolean = {
-    trees.size match {
-      case 1 => true
+    trees match {
+      case x :: Nil => true
       case _ => false
     }
   }
 
   /**
-   * The parameter `trees` of this function is a list of code trees ordered
-   * by ascending weights.
-   *
-   * This function takes the first two elements of the list `trees` and combines
-   * them into a single `Fork` node. This node is then added back into the
-   * remaining elements of `trees` at a position such that the ordering by weights
-   * is preserved.
-   *
-   * If `trees` is a list of less than two elements, that list should be returned
-   * unchanged.
-   */
-    def combine(trees: List[CodeTree]): List[CodeTree] = ???
+    * The parameter `trees` of this function is a list of code trees ordered
+    * by ascending weights.
+    *
+    * This function takes the first two elements of the list `trees` and combines
+    * them into a single `Fork` node. This node is then added back into the
+    * remaining elements of `trees` at a position such that the ordering by weights
+    * is preserved.
+  *
+  * If `trees` is a list of less than two elements, that list should be returned
+  * unchanged.
+  */
+  def combine(trees: List[CodeTree]): List[CodeTree] = {
+    def insert(x: CodeTree, xs: List[CodeTree]): List[CodeTree] = xs match {
+      case List() => List(x)
+      case y :: ys => if (weight(x) <= weight(y)) x :: xs else y :: insert(x, ys)
+    }
+    trees match {
+      case x :: x1 :: xs => insert(makeCodeTree(x, x1), xs)
+      case _ => trees
+    }
+  }
 
   /**
-   * This function will be called in the following way:
-   *
-   *   until(singleton, combine)(trees)
-   *
-   * where `trees` is of type `List[CodeTree]`, `singleton` and `combine` refer to
-   * the two functions defined above.
-   *
-   * In such an invocation, `until` should call the two functions until the list of
-   * code trees contains only one single tree, and then return that singleton list.
-   *
-   * Hint: before writing the implementation,
-   *  - start by defining the parameter types such that the above example invocation
-   *    is valid. The parameter types of `until` should match the argument types of
-   *    the example invocation. Also define the return type of the `until` function.
-   *  - try to find sensible parameter names for `xxx`, `yyy` and `zzz`.
-   */
-    def until(xxx: ???, yyy: ???)(zzz: ???): ??? = ???
+    * This function will be called in the following way:
+    *
+    *   until(singleton, combine)(trees)
+    *
+    * where `trees` is of type `List[CodeTree]`, `singleton` and `combine` refer to
+    * the two functions defined above.
+    *
+    * In such an invocation, `until` should call the two functions until the list of
+    * code trees contains only one single tree, and then return that singleton list.
+    *
+    * Hint: before writing the implementation,
+    *  - start by defining the parameter types such that the above example invocation
+    *    is valid. The parameter types of `until` should match the argument types of
+    *    the example invocation. Also define the return type of the `until` function.
+    *  - try to find sensible parameter names for `xxx`, `yyy` and `zzz`.
+    */
+  def until(isSingle: List[CodeTree] => Boolean, combine: List[CodeTree] => List[CodeTree])(trees: List[CodeTree]): List[CodeTree] = {
+    if (isSingle(trees)) trees
+    else until(isSingle, combine)(combine(trees))
+  }
 
   /**
     * This function creates a code tree which is optimal to encode the text `chars`.
@@ -153,7 +186,10 @@ object Huffman {
     * The parameter `chars` is an arbitrary text. This function extracts the character
     * frequencies from that text and creates a code tree based on them.
     */
-  def createCodeTree(chars: List[Char]): CodeTree = ???
+  def createCodeTree(chars: List[Char]): CodeTree = {
+    val trees: List[CodeTree] = until(singleton(_), combine(_))(makeOrderedLeafList(times(chars)))
+    trees(0)
+  }
 
 
   // Part 3: Decoding
@@ -164,7 +200,9 @@ object Huffman {
     * This function decodes the bit sequence `bits` using the code tree `tree` and returns
     * the resulting list of characters.
     */
-  def decode(tree: CodeTree, bits: List[Bit]): List[Char] = ???
+  def decode(tree: CodeTree, bits: List[Bit]): List[Char] = {
+
+  }
 
   /**
     * A Huffman coding tree for the French language.
